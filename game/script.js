@@ -14,6 +14,9 @@ class GomokuGame {
         this.gameStatusElement = document.getElementById('game-status');
         this.restartButton = document.getElementById('restart-btn');
 
+        // 绑定事件处理器以便后续移除
+        this.handleClickBound = this.handleClick.bind(this);
+
         this.init();
     }
 
@@ -39,8 +42,9 @@ class GomokuGame {
 
     // 绑定事件监听器
     bindEvents() {
-        this.canvas.addEventListener('click', (e) => this.handleClick(e));
+        this.canvas.addEventListener('click', this.handleClickBound);
         this.restartButton.addEventListener('click', () => this.init());
+        this.canvas.style.cursor = 'pointer'; // 启用棋盘点击
     }
 
     // 处理点击事件
@@ -82,6 +86,13 @@ class GomokuGame {
             const winner = this.currentPlayer === 'black' ? '黑棋' : '白棋';
             this.gameStatusElement.textContent = `${winner}获胜！`;
             this.gameStatusElement.style.color = '#e74c3c';
+            this.disableBoard(); // 游戏结束后禁用棋盘
+        } else if (this.isBoardFull()) {
+            // 检查平局（棋盘填满）
+            this.gameOver = true;
+            this.gameStatusElement.textContent = '平局！';
+            this.gameStatusElement.style.color = '#f39c12';
+            this.disableBoard(); // 游戏结束后禁用棋盘
         } else {
             // 切换玩家
             this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
@@ -103,7 +114,7 @@ class GomokuGame {
         for (const [dx, dy] of directions) {
             let count = 1; // 当前位置已经有一个棋子
 
-            // 正向检查
+            // 正向检查（最多检查4个位置）
             for (let i = 1; i <= 4; i++) {
                 const newRow = row + dx * i;
                 const newCol = col + dy * i;
@@ -114,7 +125,7 @@ class GomokuGame {
                 }
             }
 
-            // 反向检查
+            // 反向检查（最多检查4个位置）
             for (let i = 1; i <= 4; i++) {
                 const newRow = row - dx * i;
                 const newCol = col - dy * i;
@@ -125,6 +136,7 @@ class GomokuGame {
                 }
             }
 
+            // 如果连续棋子数达到5个或更多，则获胜
             if (count >= 5) {
                 return true;
             }
@@ -136,6 +148,25 @@ class GomokuGame {
     // 检查坐标是否在棋盘范围内
     isInBounds(row, col) {
         return row >= 0 && row < this.boardSize && col >= 0 && col < this.boardSize;
+    }
+
+    // 检查棋盘是否已满（平局检测）
+    isBoardFull() {
+        for (let row = 0; row < this.boardSize; row++) {
+            for (let col = 0; col < this.boardSize; col++) {
+                if (this.board[row][col] === null) {
+                    return false; // 还有空位
+                }
+            }
+        }
+        return true; // 棋盘已满
+    }
+
+    // 禁用棋盘点击（游戏结束后）
+    disableBoard() {
+        this.canvas.style.cursor = 'not-allowed';
+        // 移除点击事件监听器
+        this.canvas.removeEventListener('click', this.handleClickBound);
     }
 
     // 更新UI

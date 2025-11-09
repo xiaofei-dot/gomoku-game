@@ -42,6 +42,9 @@
             <li>平局检测功能</li>
             <li>游戏状态管理（游戏结束后禁用棋盘）</li>
             <li>获胜检测逻辑优化</li>
+            <li>移动历史记录和撤销功能</li>
+            <li>音效和动画效果</li>
+            <li>移动有效性检查增强</li>
         </ul>
     </div>
 
@@ -52,6 +55,9 @@
             <li>测试平局检测：尝试填满整个棋盘（需要225步）</li>
             <li>测试获胜检测：放置5个连续棋子验证获胜检测</li>
             <li>测试游戏状态管理：游戏结束后尝试点击棋盘，应该无法放置棋子</li>
+            <li>测试撤销功能：放置棋子后点击"撤销"按钮</li>
+            <li>测试音效：放置棋子时应该听到音效</li>
+            <li>测试获胜高亮：获胜时应该看到连线高亮效果</li>
             <li>测试重新开始功能：点击"重新开始"按钮重置游戏</li>
         </ol>
     </div>
@@ -114,6 +120,66 @@
                         name: '获胜检测方法存在',
                         status: 'fail',
                         message: 'checkWin方法未实现'
+                    });
+                }
+
+                // 测试1.4: 检查移动历史记录
+                if (game.moveHistory && Array.isArray(game.moveHistory)) {
+                    results.push({
+                        name: '移动历史记录',
+                        status: 'pass',
+                        message: '移动历史记录功能已实现'
+                    });
+                } else {
+                    results.push({
+                        name: '移动历史记录',
+                        status: 'fail',
+                        message: '移动历史记录功能未实现'
+                    });
+                }
+
+                // 测试1.5: 检查撤销功能
+                if (typeof game.undoMove === 'function') {
+                    results.push({
+                        name: '撤销功能',
+                        status: 'pass',
+                        message: '撤销功能已实现'
+                    });
+                } else {
+                    results.push({
+                        name: '撤销功能',
+                        status: 'fail',
+                        message: '撤销功能未实现'
+                    });
+                }
+
+                // 测试1.6: 检查音效功能
+                if (typeof game.playPlaceSound === 'function') {
+                    results.push({
+                        name: '音效功能',
+                        status: 'pass',
+                        message: '音效功能已实现'
+                    });
+                } else {
+                    results.push({
+                        name: '音效功能',
+                        status: 'fail',
+                        message: '音效功能未实现'
+                    });
+                }
+
+                // 测试1.7: 检查获胜连线高亮
+                if (typeof game.highlightWinningLine === 'function') {
+                    results.push({
+                        name: '获胜连线高亮',
+                        status: 'pass',
+                        message: '获胜连线高亮功能已实现'
+                    });
+                } else {
+                    results.push({
+                        name: '获胜连线高亮',
+                        status: 'fail',
+                        message: '获胜连线高亮功能未实现'
                     });
                 }
 

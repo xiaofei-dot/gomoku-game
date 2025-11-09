@@ -8,11 +8,13 @@ class GomokuGame {
         this.board = []; // 棋盘状态数组
         this.currentPlayer = 'black'; // 当前玩家：black或white
         this.gameOver = false;
+        this.moveHistory = []; // 移动历史记录
 
         // 初始化DOM元素
         this.currentPlayerElement = document.getElementById('current-player');
         this.gameStatusElement = document.getElementById('game-status');
         this.restartButton = document.getElementById('restart-btn');
+        this.undoButton = document.getElementById('undo-btn');
 
         // 绑定事件处理器以便后续移除
         this.handleClickBound = this.handleClick.bind(this);
@@ -29,9 +31,11 @@ class GomokuGame {
 
         this.currentPlayer = 'black';
         this.gameOver = false;
+        this.moveHistory = []; // 清空移动历史
 
         // 更新UI
         this.updateUI();
+        this.updateUndoButton();
 
         // 绘制棋盘
         this.drawBoard();
@@ -44,6 +48,7 @@ class GomokuGame {
     bindEvents() {
         this.canvas.addEventListener('click', this.handleClickBound);
         this.restartButton.addEventListener('click', () => this.init());
+        this.undoButton.addEventListener('click', () => this.undoMove());
         this.canvas.style.cursor = 'pointer'; // 启用棋盘点击
     }
 
@@ -67,18 +72,37 @@ class GomokuGame {
 
     // 检查移动是否有效
     isValidMove(row, col) {
-        return row >= 0 && row < this.boardSize &&
-               col >= 0 && col < this.boardSize &&
-               this.board[row][col] === null;
+        // 检查边界
+        if (row < 0 || row >= this.boardSize || col < 0 || col >= this.boardSize) {
+            return false;
+        }
+
+        // 检查位置是否为空
+        if (this.board[row][col] !== null) {
+            return false;
+        }
+
+        // 检查游戏是否结束
+        if (this.gameOver) {
+            return false;
+        }
+
+        return true;
     }
 
     // 执行移动
     makeMove(row, col) {
+        // 记录移动历史
+        this.moveHistory.push({ row, col, player: this.currentPlayer });
+
         // 放置棋子
         this.board[row][col] = this.currentPlayer;
 
         // 绘制棋子
         this.drawPiece(row, col, this.currentPlayer);
+
+        // 更新撤销按钮状态
+        this.updateUndoButton();
 
         // 检查是否获胜
         if (this.checkWin(row, col)) {
@@ -113,6 +137,7 @@ class GomokuGame {
 
         for (const [dx, dy] of directions) {
             let count = 1; // 当前位置已经有一个棋子
+            let winningLine = [{ row, col }]; // 记录获胜连线
 
             // 正向检查（最多检查4个位置）
             for (let i = 1; i <= 4; i++) {
@@ -120,6 +145,7 @@ class GomokuGame {
                 const newCol = col + dy * i;
                 if (this.isInBounds(newRow, newCol) && this.board[newRow][newCol] === player) {
                     count++;
+                    winningLine.push({ row: newRow, col: newCol });
                 } else {
                     break;
                 }
@@ -131,6 +157,7 @@ class GomokuGame {
                 const newCol = col - dy * i;
                 if (this.isInBounds(newRow, newCol) && this.board[newRow][newCol] === player) {
                     count++;
+                    winningLine.unshift({ row: newRow, col: newCol });
                 } else {
                     break;
                 }
@@ -138,11 +165,40 @@ class GomokuGame {
 
             // 如果连续棋子数达到5个或更多，则获胜
             if (count >= 5) {
+                this.highlightWinningLine(winningLine);
                 return true;
             }
         }
 
         return false;
+    }
+
+    // 高亮显示获胜连线
+    highlightWinningLine(winningLine) {
+        const { ctx, cellSize } = this;
+
+        // 绘制高亮效果
+        ctx.strokeStyle = '#e74c3c';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([5, 5]);
+
+        // 绘制获胜连线
+        if (winningLine.length >= 2) {
+            const first = winningLine[0];
+            const last = winningLine[winningLine.length - 1];
+
+            const startX = first.col * cellSize + cellSize / 2;
+            const startY = first.row * cellSize + cellSize / 2;
+            const endX = last.col * cellSize + cellSize / 2;
+            const endY = last.row * cellSize + cellSize / 2;
+
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.lineTo(endX, endY);
+            ctx.stroke();
+        }
+
+        ctx.setLineDash([]); // 重置虚线样式
     }
 
     // 检查坐标是否在棋盘范围内
@@ -174,6 +230,41 @@ class GomokuGame {
         const playerText = this.currentPlayer === 'black' ? '黑棋' : '白棋';
         this.currentPlayerElement.textContent = playerText;
         this.currentPlayerElement.style.color = this.currentPlayer === 'black' ? '#000' : '#666';
+    }
+
+    // 更新撤销按钮状态
+    updateUndoButton() {
+        this.undoButton.disabled = this.moveHistory.length === 0 || this.gameOver;
+    }
+
+    // 撤销上一步移动
+    undoMove() {
+        if (this.moveHistory.length === 0 || this.gameOver) return;
+
+        // 获取最后一步移动
+        const lastMove = this.moveHistory.pop();
+
+        // 从棋盘上移除棋子
+        this.board[lastMove.row][lastMove.col] = null;
+
+        // 恢复当前玩家
+        this.currentPlayer = lastMove.player;
+
+        // 重新绘制棋盘和棋子
+        this.drawBoard();
+
+        // 更新UI
+        this.updateUI();
+        this.updateUndoButton();
+
+        // 重置游戏状态（如果之前游戏结束）
+        if (this.gameOver) {
+            this.gameOver = false;
+            this.gameStatusElement.textContent = '游戏进行中';
+            this.gameStatusElement.style.color = '#27ae60';
+            this.canvas.style.cursor = 'pointer';
+            this.canvas.addEventListener('click', this.handleClickBound);
+        }
     }
 
     // 绘制棋盘
@@ -256,6 +347,34 @@ class GomokuGame {
         ctx.strokeStyle = player === 'black' ? '#333' : '#999';
         ctx.lineWidth = 1;
         ctx.stroke();
+
+        // 播放棋子放置音效（如果支持）
+        this.playPlaceSound();
+    }
+
+    // 播放棋子放置音效
+    playPlaceSound() {
+        // 创建简单的音效
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = 800; // 频率
+            oscillator.type = 'sine'; // 波形
+
+            gainNode.gain.value = 0.1; // 音量
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (error) {
+            // 如果音效不可用，静默失败
+            console.log('音效不可用');
+        }
     }
 
     // 重新绘制所有棋子
